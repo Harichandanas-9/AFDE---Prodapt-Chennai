@@ -1,0 +1,2129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenAI Agents SDK — A Practical Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c12;
+    --bg2: #0d1520;
+    --bg3: #111d2e;
+    --card: #0f1c2e;
+    --card2: #152236;
+    --border: #1e3352;
+    --border2: #254468;
+    --accent: #00c2ff;
+    --accent2: #0077cc;
+    --accent3: #00e5b0;
+    --gold: #f4c842;
+    --purple: #a78bfa;
+    --red: #ff4f6d;
+    --orange: #ff9f43;
+    --text: #e8f0fe;
+    --text2: #8fa8c8;
+    --text3: #4d7fa8;
+    --glow: rgba(0, 194, 255, 0.15);
+    --glow2: rgba(0, 229, 176, 0.12);
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+    --serif: 'Instrument Serif', serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.5;
+  }
+
+  /* ── GRID BACKGROUND ── */
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,194,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,194,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 80px 40px;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(0,194,255,0.1) 0%, rgba(0,119,204,0.05) 40%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .hero-badge {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border2);
+    background: rgba(0,194,255,0.06);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 2px;
+    margin-bottom: 36px;
+    backdrop-filter: blur(10px);
+  }
+
+  .hero-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--accent3);
+    border-radius: 50%;
+    animation: pulse-dot 2s infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .hero-title {
+    position: relative;
+    z-index: 1;
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: clamp(3rem, 7vw, 6rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #ffffff 0%, var(--accent) 50%, var(--accent3) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    position: relative;
+    z-index: 1;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+    color: var(--text2);
+    margin-bottom: 48px;
+    max-width: 600px;
+  }
+
+  .hero-meta {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .hero-meta-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .hero-meta-item .label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  .hero-meta-item .value {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .hero-divider {
+    width: 1px;
+    height: 40px;
+    background: var(--border);
+  }
+
+  /* ── LAYOUT ── */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 40px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .section {
+    padding: 80px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── SECTION HEADERS ── */
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    margin-bottom: 56px;
+  }
+
+  .section-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    padding-top: 8px;
+    min-width: 32px;
+  }
+
+  .section-title-block {}
+
+  .section-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent3);
+    margin-bottom: 8px;
+  }
+
+  .section-title {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+
+  .section-desc {
+    font-size: 1rem;
+    color: var(--text2);
+    max-width: 700px;
+  }
+
+  /* ── CALLOUT ── */
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: linear-gradient(90deg, rgba(0,194,255,0.07) 0%, transparent 100%);
+    padding: 20px 24px;
+    margin: 32px 0;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 1.1rem;
+    color: var(--text);
+    border-radius: 0 4px 4px 0;
+  }
+
+  .callout.green {
+    border-color: var(--accent3);
+    background: linear-gradient(90deg, rgba(0,229,176,0.07) 0%, transparent 100%);
+  }
+
+  .callout.gold {
+    border-color: var(--gold);
+    background: linear-gradient(90deg, rgba(244,200,66,0.07) 0%, transparent 100%);
+    color: var(--gold);
+  }
+
+  /* ── CODE BLOCKS ── */
+  .code-block {
+    background: #040810;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 24px 0;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-lang {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .code-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .code-dots span {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .code-dots span:nth-child(1) { background: #ff5f57; }
+  .code-dots span:nth-child(2) { background: #ffbd2e; }
+  .code-dots span:nth-child(3) { background: #28ca41; }
+
+  .code-body {
+    padding: 20px 24px;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.8;
+    color: #c9d8ef;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .code-body .kw { color: #c792ea; }
+  .code-body .fn { color: #82aaff; }
+  .code-body .str { color: #c3e88d; }
+  .code-body .cmt { color: #546e7a; font-style: italic; }
+  .code-body .num { color: #f78c6c; }
+  .code-body .cls { color: #ffcb6b; }
+  .code-body .dec { color: var(--accent3); }
+
+  /* ── PARAMS TABLE ── */
+  .params-grid {
+    display: grid;
+    gap: 12px;
+    margin: 32px 0;
+  }
+
+  .param-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: 200px 80px 1fr;
+    gap: 16px;
+    align-items: start;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .param-card:hover {
+    border-color: var(--border2);
+    background: var(--card2);
+  }
+
+  .param-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .param-name .required-badge {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 2px 6px;
+    border-radius: 2px;
+    background: rgba(255,79,109,0.15);
+    color: var(--red);
+    border: 1px solid rgba(255,79,109,0.3);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .param-name .optional-badge {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 2px 6px;
+    border-radius: 2px;
+    background: rgba(167,139,250,0.1);
+    color: var(--purple);
+    border: 1px solid rgba(167,139,250,0.25);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .param-type {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent3);
+    padding-top: 2px;
+    font-weight: 500;
+  }
+
+  .param-desc {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  .param-desc strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .param-default {
+    margin-top: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .param-default span {
+    color: var(--gold);
+  }
+
+  /* ── METHODS TABLE ── */
+  .methods-grid {
+    display: grid;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 32px 0;
+  }
+
+  .method-row {
+    background: var(--card);
+    display: grid;
+    grid-template-columns: 220px 120px 1fr;
+    gap: 0;
+    transition: background 0.15s;
+  }
+
+  .method-row:hover { background: var(--card2); }
+
+  .method-row.header {
+    background: var(--bg3);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  .method-cell {
+    padding: 16px 20px;
+    border-right: 1px solid var(--border);
+    font-size: 13.5px;
+  }
+
+  .method-cell:last-child { border-right: none; }
+
+  .method-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  .method-returns {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent3);
+  }
+
+  .method-desc {
+    color: var(--text2);
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+
+  /* ── FLOW DIAGRAM ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    margin: 32px 0;
+    padding-left: 24px;
+    border-left: 2px solid var(--border2);
+  }
+
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 12px 0;
+    position: relative;
+  }
+
+  .flow-step::before {
+    content: '';
+    position: absolute;
+    left: -31px;
+    top: 20px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 10px rgba(0,194,255,0.5);
+  }
+
+  .flow-step.green::before { background: var(--accent3); box-shadow: 0 0 10px rgba(0,229,176,0.5); }
+  .flow-step.gold::before { background: var(--gold); box-shadow: 0 0 10px rgba(244,200,66,0.5); }
+
+  .flow-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .flow-content {}
+
+  .flow-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 3px;
+    letter-spacing: 0.05em;
+  }
+
+  .flow-text {
+    font-size: 13.5px;
+    color: var(--text2);
+  }
+
+  /* ── CARDS GRID ── */
+  .cards-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 32px 0;
+  }
+
+  .cards-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin: 32px 0;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border2);
+  }
+
+  .card-icon {
+    font-size: 24px;
+    margin-bottom: 12px;
+  }
+
+  .card-title {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 15px;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+
+  .card-body {
+    font-size: 13.5px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  /* ── ANALOGY TABLE ── */
+  .analogy-grid {
+    display: grid;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 32px 0;
+  }
+
+  .analogy-row {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    background: var(--card);
+    transition: background 0.15s;
+  }
+
+  .analogy-row:hover { background: var(--card2); }
+
+  .analogy-row.head {
+    background: var(--bg3);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  .analogy-cell {
+    padding: 14px 20px;
+    border-right: 1px solid var(--border);
+    font-size: 13.5px;
+  }
+
+  .analogy-cell:last-child { border-right: none; }
+
+  .analogy-component {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .analogy-meaning {
+    color: var(--text2);
+  }
+
+  /* ── INDUSTRY TABLE ── */
+  .industry-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 32px 0;
+  }
+
+  .industry-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    transition: border-color 0.2s;
+  }
+
+  .industry-card:hover { border-color: var(--border2); }
+
+  .industry-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .industry-name {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--accent3);
+    margin-bottom: 5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .industry-use {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+
+  /* ── ARCHITECTURE VISUAL ── */
+  .arch-visual {
+    background: #040810;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 48px 40px;
+    margin: 32px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .arch-visual::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(0,194,255,0.05) 0%, transparent 60%);
+  }
+
+  .arch-node {
+    position: relative;
+    z-index: 1;
+    border-radius: 6px;
+    padding: 12px 28px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .arch-node.runner { background: rgba(0,194,255,0.15); border: 1.5px solid var(--accent); color: var(--accent); }
+  .arch-node.manager { background: rgba(244,200,66,0.12); border: 1.5px solid var(--gold); color: var(--gold); }
+  .arch-node.specialist { background: rgba(0,229,176,0.1); border: 1.5px solid var(--accent3); color: var(--accent3); width: 140px; }
+  .arch-node.shared { background: rgba(167,139,250,0.1); border: 1.5px solid var(--purple); color: var(--purple); }
+
+  .arch-arrow {
+    width: 2px;
+    height: 28px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.3));
+    position: relative;
+    z-index: 1;
+  }
+
+  .arch-arrow::after {
+    content: '▼';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    color: rgba(255,255,255,0.4);
+  }
+
+  .arch-row {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    position: relative;
+    z-index: 1;
+  }
+
+  .arch-branch-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .arch-h-line {
+    width: 180px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent3), rgba(0,229,176,0.2), var(--accent3));
+    position: relative;
+    margin-top: 12px;
+  }
+
+  .arch-h-line::before,
+  .arch-h-line::after {
+    content: '▼';
+    position: absolute;
+    bottom: -12px;
+    font-size: 8px;
+    color: var(--accent3);
+  }
+
+  .arch-h-line::before { left: 8px; }
+  .arch-h-line::after { right: 8px; }
+
+  .arch-specialists {
+    display: flex;
+    gap: 24px;
+    margin-top: 8px;
+  }
+
+  .arch-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .arch-tools-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .arch-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--card);
+    margin-top: 8px;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 32px 36px;
+    margin: 40px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 40px;
+  }
+
+  .toc-title {
+    grid-column: 1 / -1;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 16px;
+  }
+
+  .toc-item {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px dashed rgba(255,255,255,0.04);
+    text-decoration: none;
+    color: var(--text2);
+    font-size: 14px;
+    transition: color 0.15s;
+  }
+
+  .toc-item:hover { color: var(--accent); }
+
+  .toc-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    min-width: 20px;
+  }
+
+  /* ── ROADMAP ── */
+  .roadmap {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin: 32px 0;
+  }
+
+  .roadmap-level {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .roadmap-level::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .roadmap-level.beginner::before { background: linear-gradient(90deg, var(--accent3), transparent); }
+  .roadmap-level.intermediate::before { background: linear-gradient(90deg, var(--gold), transparent); }
+  .roadmap-level.advanced::before { background: linear-gradient(90deg, var(--red), transparent); }
+
+  .roadmap-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .roadmap-level.beginner .roadmap-label { color: var(--accent3); }
+  .roadmap-level.intermediate .roadmap-label { color: var(--gold); }
+  .roadmap-level.advanced .roadmap-label { color: var(--red); }
+
+  .roadmap-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    font-size: 13.5px;
+    color: var(--text2);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .roadmap-item:last-child { border-bottom: none; }
+
+  .roadmap-item::before {
+    content: '→';
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  /* ── UTILITY TABLE ── */
+  .utility-grid {
+    display: grid;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 32px 0;
+  }
+
+  .utility-row {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    background: var(--card);
+    transition: background 0.15s;
+  }
+
+  .utility-row:hover { background: var(--card2); }
+
+  .utility-row.head {
+    background: var(--bg3);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  .utility-cell {
+    padding: 14px 20px;
+    border-right: 1px solid var(--border);
+    font-size: 13.5px;
+  }
+
+  .utility-cell:last-child { border-right: none; }
+  .utility-name { font-family: var(--mono); font-weight: 700; font-size: 12px; color: var(--accent); }
+  .utility-desc { color: var(--text2); }
+
+  /* ── INTRO SECTION ── */
+  .intro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    margin: 40px 0;
+    align-items: start;
+  }
+
+  .intro-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .intro-list li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+
+  .intro-list li::before {
+    content: '⬡';
+    color: var(--accent);
+    font-size: 10px;
+    padding-top: 3px;
+    flex-shrink: 0;
+  }
+
+  .intro-sub-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  /* ── MEMORY TYPES ── */
+  .memory-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin: 32px 0;
+  }
+
+  .memory-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .memory-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  .memory-card.lt::after { background: linear-gradient(90deg, var(--gold), transparent); }
+  .memory-card.session::after { background: linear-gradient(90deg, var(--purple), transparent); }
+
+  .memory-icon { font-size: 22px; margin-bottom: 10px; }
+  .memory-name { font-family: var(--sans); font-weight: 700; font-size: 14px; color: #fff; margin-bottom: 6px; }
+  .memory-desc { font-size: 13px; color: var(--text2); line-height: 1.55; }
+
+  /* ── MENTAL MODEL ── */
+  .mental-model {
+    background: #040810;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 36px 40px;
+    margin: 32px 0;
+    font-family: var(--mono);
+    font-size: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mm-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 20px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+  }
+
+  .mm-label { font-size: 10px; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; }
+  .mm-value { font-size: 13px; font-weight: 700; color: var(--accent); }
+
+  .mm-plus {
+    font-size: 18px;
+    color: var(--border2);
+    align-self: center;
+  }
+
+  /* ── RUNNABLE TABLE ── */
+  .runnable-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 32px 0;
+  }
+
+  .runnable-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+
+  .runnable-card:hover { border-color: var(--border2); }
+
+  .runnable-type {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 700;
+  }
+
+  .runnable-name {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 15px;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+
+  .runnable-desc { font-size: 13px; color: var(--text2); line-height: 1.5; }
+
+  /* ── FOOTER ── */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 48px 0;
+    text-align: center;
+  }
+
+  .footer-name {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+
+  .footer-link {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .footer-link:hover { text-decoration: underline; }
+
+  .footer-copy {
+    margin-top: 24px;
+    font-size: 12px;
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+
+  /* ── RESOURCES ── */
+  .resources-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin: 32px 0;
+  }
+
+  .resource-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .resource-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+  .resource-type {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .resource-name {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    line-height: 1.3;
+  }
+
+  .resource-url { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+
+  /* ── ANIMATION ── */
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero > * { animation: fade-up 0.7s ease both; }
+  .hero-badge { animation-delay: 0.1s; }
+  .hero-title { animation-delay: 0.2s; }
+  .hero-sub { animation-delay: 0.35s; }
+  .hero-meta { animation-delay: 0.5s; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .container { padding: 0 20px; }
+    .cards-2, .cards-3, .intro-grid, .roadmap, .resources-grid { grid-template-columns: 1fr; }
+    .industry-grid, .memory-grid, .runnable-grid { grid-template-columns: 1fr; }
+    .param-card { grid-template-columns: 1fr; gap: 4px; }
+    .method-row, .utility-row, .analogy-row { grid-template-columns: 1fr; }
+    .toc { grid-template-columns: 1fr; }
+    .hero { padding: 60px 20px; }
+    .section-header { flex-direction: column; gap: 8px; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* Print */
+  @media print {
+    .grid-bg { display: none; }
+    body::before { display: none; }
+    .hero { min-height: auto; padding: 40px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<!-- ─────────────────────── HERO ─────────────────────── -->
+<section class="hero">
+  <div class="hero-badge">OpenAI Agents SDK · Reference Guide</div>
+  <h1 class="hero-title">Agents SDK</h1>
+  <p class="hero-sub">Core Components, Architecture & Execution Model — A complete reference for production-grade AI agents</p>
+  <div class="hero-meta">
+    <div class="hero-meta-item">
+      <span class="label">Author</span>
+      <span class="value">Ahmed Al-Imaad</span>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="hero-meta-item">
+      <span class="label">Components</span>
+      <span class="value">15 Sections</span>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="hero-meta-item">
+      <span class="label">Level</span>
+      <span class="value">Beginner → Advanced</span>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+
+  <!-- TOC -->
+  <nav class="toc">
+    <div class="toc-title">Table of Contents</div>
+    <a class="toc-item" href="#s1"><span class="toc-num">01</span>Introduction & Architecture</a>
+    <a class="toc-item" href="#s9"><span class="toc-num">09</span>Output Types</a>
+    <a class="toc-item" href="#s2"><span class="toc-num">02</span>Agent — The Central Worker</a>
+    <a class="toc-item" href="#s10"><span class="toc-num">10</span>Streaming</a>
+    <a class="toc-item" href="#s3"><span class="toc-num">03</span>Runner — Execution Engine</a>
+    <a class="toc-item" href="#s11"><span class="toc-num">11</span>Sessions</a>
+    <a class="toc-item" href="#s4"><span class="toc-num">04</span>Tools</a>
+    <a class="toc-item" href="#s12"><span class="toc-num">12</span>Execution Concepts</a>
+    <a class="toc-item" href="#s5"><span class="toc-num">05</span>Handoffs</a>
+    <a class="toc-item" href="#s13"><span class="toc-num">13</span>Full Architecture</a>
+    <a class="toc-item" href="#s6"><span class="toc-num">06</span>Memory</a>
+    <a class="toc-item" href="#s14"><span class="toc-num">14</span>Learning Roadmap</a>
+    <a class="toc-item" href="#s7"><span class="toc-num">07</span>Context</a>
+    <a class="toc-item" href="#s15"><span class="toc-num">15</span>Analogies & Resources</a>
+    <a class="toc-item" href="#s8"><span class="toc-num">08</span>Guardrails</a>
+  </nav>
+
+  <!-- ─────────────── SECTION 1 ─────────────── -->
+  <section class="section" id="s1">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <div class="section-title-block">
+        <div class="section-tag">Overview</div>
+        <h2 class="section-title">Introduction &<br>High-Level Architecture</h2>
+        <p class="section-desc">The OpenAI Agents SDK is OpenAI's official framework for building AI systems that go beyond single-prompt completions — purpose-built for agents that reason in steps, call tools, hand work off to other agents, hold persistent memory, and run inside production pipelines.</p>
+      </div>
+    </div>
+
+    <div class="intro-grid">
+      <div>
+        <p class="intro-sub-title">What You Can Build</p>
+        <ul class="intro-list">
+          <li>AI agents that reason, decide, and act autonomously</li>
+          <li>Multi-agent systems with specialized roles</li>
+          <li>Tool-using assistants that call APIs, databases, or functions</li>
+          <li>Autonomous workflows with branching logic</li>
+          <li>Stateful conversations with persistent memory</li>
+          <li>Agent-to-agent handoffs and delegation</li>
+        </ul>
+      </div>
+      <div>
+        <p class="intro-sub-title">Design Principles</p>
+        <ul class="intro-list">
+          <li><strong>Lightweight</strong> — no heavy framework overhead</li>
+          <li><strong>Modular</strong> — compose from small, swappable pieces</li>
+          <li><strong>Production-ready</strong> — async-first, streaming, guardrails</li>
+          <li><strong>Easy to orchestrate</strong> — scale from 1 to N agents without rewriting foundations</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout gold">
+      💡 Mental model: think of the SDK as an operating system for AI workers. The Runner is the scheduler, Agents are processes, Tools are system calls, and Memory is shared state.
+    </div>
+
+    <div class="arch-visual">
+      <div class="arch-node runner">Runner</div>
+      <div class="arch-arrow"></div>
+      <div class="arch-node manager">Agent</div>
+      <div class="arch-arrow"></div>
+      <div class="arch-node manager" style="background:rgba(0,194,255,0.08);border-color:var(--accent2);color:var(--accent);font-size:12px;padding:8px 20px;">Model</div>
+      <div class="arch-row" style="margin-top:20px;gap:48px;">
+        <div style="text-align:center">
+          <div class="arch-node specialist">⚙️ Tools</div>
+          <div class="arch-sub">function_tool</div>
+        </div>
+        <div style="text-align:center">
+          <div class="arch-node specialist">🧠 Memory</div>
+          <div class="arch-sub">SessionMemory</div>
+        </div>
+        <div style="text-align:center">
+          <div class="arch-node specialist">🤝 Handoffs</div>
+          <div class="arch-sub">Agent delegation</div>
+        </div>
+      </div>
+      <div class="arch-arrow" style="margin-top:20px;"></div>
+      <div class="arch-node shared">📤 Response</div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 2 ─────────────── -->
+  <section class="section" id="s2">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <div class="section-title-block">
+        <div class="section-tag">Core Component</div>
+        <h2 class="section-title">Agent<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">The Central AI Worker</span></h2>
+        <p class="section-desc">An Agent bundles together everything needed to reason and act: a name, instructions, a model, a set of tools, optional memory, optional handoff targets, and optional guardrails.</p>
+      </div>
+    </div>
+
+    <div class="callout">An Agent is best understood as an AI employee with defined skills and responsibilities.</div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">Python</span>
+        <div class="code-dots"><span></span><span></span><span></span></div>
+      </div>
+      <div class="code-body"><span class="kw">from</span> agents <span class="kw">import</span> Agent
+
+research_agent = <span class="cls">Agent</span>(
+    name=<span class="str">"Research Agent"</span>,
+    instructions=<span class="str">"You are an expert at researching AI trends. Be concise and cite sources."</span>,
+    model=<span class="str">"gpt-4.1-mini"</span>,
+    tools=[search_web, summarize],
+    output_type=ResearchReport,   <span class="cmt"># optional Pydantic schema</span>
+    guardrails=[no_pii_guardrail], <span class="cmt"># optional safety checks</span>
+)</div>
+    </div>
+
+    <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:20px;">Constructor Parameters &amp; Properties</p>
+
+    <div class="params-grid">
+      <div class="param-card">
+        <div class="param-name">name <span class="required-badge">required</span></div>
+        <div class="param-type">str</div>
+        <div>
+          <div class="param-desc"><strong>Identity string</strong> for this agent. Used in logs, handoff references, debugging traces, and multi-agent routing. Should be unique and descriptive within your system.</div>
+        </div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">instructions <span class="required-badge">required</span></div>
+        <div class="param-type">str</div>
+        <div>
+          <div class="param-desc"><strong>System prompt</strong> that defines the agent's behavior, persona, constraints, and focus area. This is the most important configuration — write it with precision. Supports Markdown formatting.</div>
+          <div class="param-default">Best practice: <span>be specific, give examples, define limits</span></div>
+        </div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">model <span class="required-badge">required</span></div>
+        <div class="param-type">str</div>
+        <div>
+          <div class="param-desc"><strong>Underlying LLM</strong> the agent runs on. Different agents in the same system can use different models — e.g., a fast cheap model for routing and a powerful model for analysis.</div>
+          <div class="param-default">Examples: <span>"gpt-4.1-mini"</span>, <span>"gpt-4o"</span>, <span>"gpt-4-turbo"</span></div>
+        </div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">tools <span class="optional-badge">optional</span></div>
+        <div class="param-type">list[Tool]</div>
+        <div>
+          <div class="param-desc"><strong>List of callable tools</strong> this agent can invoke. Each tool is a Python function decorated with <code style="color:var(--accent3);font-family:var(--mono);font-size:12px;">@function_tool</code>. The agent decides when and which tool to call based on context.</div>
+          <div class="param-default">Default: <span>[]</span> (no tools — pure LLM)</div>
+        </div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">handoffs <span class="optional-badge">optional</span></div>
+        <div class="param-type">list[Agent]</div>
+        <div>
+          <div class="param-desc"><strong>Other agents</strong> this agent can delegate work to. When this agent encounters a task better suited to another specialist, it performs a handoff. The runner manages the delegation and returns results.</div>
+          <div class="param-default">Default: <span>[]</span> (no delegation)</div>
+        </div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">memory <span class="optional-badge">optional</span></div>
+        <div class="param-type">Memory</div>
+        <div>
+          <div class="param-desc"><strong>Memory provider</strong> for short-term or persistent context. Enables the agent to recall previous turns, user preferences, and facts across invocations. Can be scoped per session or globally.</div>
+          <div class="param-default">Default: <span>None</span> (stateless)</div>
+        </div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">output_type <span class="optional-badge">optional</span></div>
+        <div class="param-type">Type[BaseModel]</div>
+        <div>
+          <div class="param-desc"><strong>Pydantic model class</strong> that enforces structured, typed output instead of free text. Enables agents to return JSON objects that integrate directly with downstream systems and APIs.</div>
+          <div class="param-default">Default: <span>None</span> (free-text response)</div>
+        </div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">guardrails <span class="optional-badge">optional</span></div>
+        <div class="param-type">list[Guardrail]</div>
+        <div>
+          <div class="param-desc"><strong>Validation &amp; safety checks</strong> applied to agent outputs before they pass downstream. Can validate structure, block unsafe content, enforce policy, or restrict tool access in given contexts.</div>
+          <div class="param-default">Default: <span>[]</span> (no validation)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mental-model">
+      <div class="mm-item"><div class="mm-label">Brain</div><div class="mm-value">model</div></div>
+      <span class="mm-plus">+</span>
+      <div class="mm-item"><div class="mm-label">Role</div><div class="mm-value">instructions</div></div>
+      <span class="mm-plus">+</span>
+      <div class="mm-item"><div class="mm-label">Hands</div><div class="mm-value">tools</div></div>
+      <span class="mm-plus">+</span>
+      <div class="mm-item"><div class="mm-label">Recall</div><div class="mm-value">memory</div></div>
+      <span class="mm-plus">+</span>
+      <div class="mm-item"><div class="mm-label">Network</div><div class="mm-value">handoffs</div></div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 3 ─────────────── -->
+  <section class="section" id="s3">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <div class="section-title-block">
+        <div class="section-tag">Execution Engine</div>
+        <h2 class="section-title">Runner<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">The Orchestrator</span></h2>
+        <p class="section-desc">The Runner is the most important component in the SDK. It turns a configured Agent into a running system — without it, agents are inert definitions. It drives tool calling, memory updates, handoffs, streaming, and context propagation.</p>
+      </div>
+    </div>
+
+    <div class="callout">If the Agent is the worker, the Runner is the manager. Without it, nothing actually runs.</div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Python</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+      <div class="code-body"><span class="kw">from</span> agents <span class="kw">import</span> Runner
+
+<span class="cmt"># Synchronous (simple scripts)</span>
+result = <span class="cls">Runner</span>.<span class="fn">run_sync</span>(agent, <span class="str">"Latest AI trends in 2025"</span>)
+<span class="fn">print</span>(result.final_output)
+
+<span class="cmt"># Asynchronous (APIs, production systems)</span>
+result = <span class="kw">await</span> <span class="cls">Runner</span>.<span class="fn">run</span>(agent, <span class="str">"Latest AI trends in 2025"</span>)
+
+<span class="cmt"># Streaming (real-time UX)</span>
+<span class="kw">async for</span> chunk <span class="kw">in</span> <span class="cls">Runner</span>.<span class="fn">run_streamed</span>(agent, <span class="str">"Latest AI trends"</span>):
+    <span class="fn">print</span>(chunk, end=<span class="str">""</span>, flush=<span class="cls">True</span>)</div>
+    </div>
+
+    <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;">Key Methods &amp; Parameters</p>
+
+    <div class="methods-grid">
+      <div class="method-row header">
+        <div class="method-cell">Method</div>
+        <div class="method-cell">Returns</div>
+        <div class="method-cell">Description</div>
+      </div>
+      <div class="method-row">
+        <div class="method-cell"><div class="method-name">run_sync(agent, input)</div></div>
+        <div class="method-cell"><div class="method-returns">RunResult</div></div>
+        <div class="method-cell"><div class="method-desc"><strong>Synchronous blocking call.</strong> Simplest way to run an agent. Blocks until the agent completes. Ideal for scripts and CLIs. Parameters: <code style="font-family:var(--mono);font-size:11px;color:var(--accent3)">agent: Agent</code>, <code style="font-family:var(--mono);font-size:11px;color:var(--accent3)">input: str | list</code>, <code style="font-family:var(--mono);font-size:11px;color:var(--accent3)">context: dict = None</code></div></div>
+      </div>
+      <div class="method-row">
+        <div class="method-cell"><div class="method-name">run(agent, input)</div></div>
+        <div class="method-cell"><div class="method-returns">Coroutine[RunResult]</div></div>
+        <div class="method-cell"><div class="method-desc"><strong>Async execution.</strong> Non-blocking coroutine for production APIs and parallel workflows. Must be awaited. Plays well with FastAPI, asyncio. Parameters: <code style="font-family:var(--mono);font-size:11px;color:var(--accent3)">agent: Agent</code>, <code style="font-family:var(--mono);font-size:11px;color:var(--accent3)">input: str | list</code>, <code style="font-family:var(--mono);font-size:11px;color:var(--accent3)">context: dict = None</code></div></div>
+      </div>
+      <div class="method-row">
+        <div class="method-cell"><div class="method-name">stream(agent, input)</div></div>
+        <div class="method-cell"><div class="method-returns">AsyncGenerator[str]</div></div>
+        <div class="method-cell"><div class="method-desc"><strong>Token-level streaming.</strong> Yields tokens as they are generated. Essential for chat UIs, live dashboards, perceived-latency reduction. Parameters: <code style="font-family:var(--mono);font-size:11px;color:var(--accent3)">agent: Agent</code>, <code style="font-family:var(--mono);font-size:11px;color:var(--accent3)">input: str</code>, <code style="font-family:var(--mono);font-size:11px;color:var(--accent3)">stream_options: dict = None</code></div></div>
+      </div>
+      <div class="method-row">
+        <div class="method-cell"><div class="method-name">run_streamed(agent, input)</div></div>
+        <div class="method-cell"><div class="method-returns">AsyncGenerator[RunEvent]</div></div>
+        <div class="method-cell"><div class="method-desc"><strong>Full workflow streaming.</strong> Streams the entire agent workflow incrementally — tool calls, intermediate steps, and final output. Exposes RunEvents for fine-grained control. Parameters: <code style="font-family:var(--mono);font-size:11px;color:var(--accent3)">agent: Agent</code>, <code style="font-family:var(--mono);font-size:11px;color:var(--accent3)">input: str</code>, <code style="font-family:var(--mono);font-size:11px;color:var(--accent3)">context: dict = None</code></div></div>
+      </div>
+    </div>
+
+    <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin:32px 0 16px;">Execution Flow</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-icon">📥</div>
+        <div class="flow-content">
+          <div class="flow-label">INPUT RECEIVED</div>
+          <div class="flow-text">Runner.run(agent, input) is called — begins the execution loop</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-icon">🧠</div>
+        <div class="flow-content">
+          <div class="flow-label">AGENT REASONS</div>
+          <div class="flow-text">Agent LLM processes instructions + input + memory context and decides next action</div>
+        </div>
+      </div>
+      <div class="flow-step green">
+        <div class="flow-icon">⚙️</div>
+        <div class="flow-content">
+          <div class="flow-label">TOOL CALL (if needed)</div>
+          <div class="flow-text">Runner detects tool_call in response, executes the function, injects result back into reasoning</div>
+        </div>
+      </div>
+      <div class="flow-step green">
+        <div class="flow-icon">🔄</div>
+        <div class="flow-content">
+          <div class="flow-label">CONTINUE LOOP</div>
+          <div class="flow-text">Agent continues reasoning with new information. Loop repeats until no more tool calls needed</div>
+        </div>
+      </div>
+      <div class="flow-step gold">
+        <div class="flow-icon">📤</div>
+        <div class="flow-content">
+          <div class="flow-label">FINAL OUTPUT</div>
+          <div class="flow-text">result.final_output returned — either free text or typed Pydantic object</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 4 ─────────────── -->
+  <section class="section" id="s4">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <div class="section-title-block">
+        <div class="section-tag">Capabilities</div>
+        <h2 class="section-title">Tools<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">Giving Agents Real Capabilities</span></h2>
+        <p class="section-desc">Tools are functions that agents can call. They are the difference between an agent that generates text and an agent that does things. A pure LLM can write a description of the weather; an agent with a weather tool can fetch actual conditions.</p>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Python — Defining &amp; Attaching Tools</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+      <div class="code-body"><span class="kw">from</span> agents <span class="kw">import</span> function_tool, Agent
+
+<span class="dec">@function_tool</span>
+<span class="kw">def</span> <span class="fn">get_weather</span>(city: <span class="cls">str</span>) -> <span class="cls">dict</span>:
+    <span class="str">"""Fetch current weather for a city. Returns temperature and condition."""</span>
+    <span class="kmt"># Your API call here</span>
+    <span class="kw">return</span> {<span class="str">"city"</span>: city, <span class="str">"condition"</span>: <span class="str">"Sunny"</span>, <span class="str">"temp_c"</span>: <span class="num">28</span>}
+
+<span class="dec">@function_tool</span>
+<span class="kw">def</span> <span class="fn">search_web</span>(query: <span class="cls">str</span>, max_results: <span class="cls">int</span> = <span class="num">5</span>) -> <span class="cls">list</span>[<span class="cls">str</span>]:
+    <span class="str">"""Search the web for current information."""</span>
+    <span class="kw">return</span> [...]
+
+weather_agent = <span class="cls">Agent</span>(
+    name=<span class="str">"Weather Agent"</span>,
+    tools=[get_weather, search_web]
+)</div>
+    </div>
+
+    <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;">@function_tool Decorator — Properties</p>
+
+    <div class="params-grid">
+      <div class="param-card">
+        <div class="param-name">Function signature <span class="required-badge">required</span></div>
+        <div class="param-type">callable</div>
+        <div>
+          <div class="param-desc"><strong>Type-annotated Python function.</strong> Parameter names and type hints are automatically converted to the tool's JSON schema, which is passed to the LLM so it knows how to call the tool correctly.</div>
+        </div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">Docstring <span class="optional-badge">optional</span></div>
+        <div class="param-type">str</div>
+        <div>
+          <div class="param-desc"><strong>Tool description</strong> shown to the LLM. Helps the model understand when to use the tool and what it does. Better docstrings → better tool selection decisions.</div>
+        </div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">Return type <span class="optional-badge">optional</span></div>
+        <div class="param-type">any JSON-serializable</div>
+        <div>
+          <div class="param-desc"><strong>Output injected back</strong> into the agent's reasoning context. Must be JSON-serializable: str, int, list, dict, or Pydantic model. Non-serializable types will raise errors at runtime.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards-3">
+      <div class="card"><div class="card-icon">🌐</div><div class="card-title">Web Search</div><div class="card-body">Query search engines and retrieve current, real-time information beyond the model's training cutoff</div></div>
+      <div class="card"><div class="card-icon">🗄️</div><div class="card-title">Database Queries</div><div class="card-body">Run SQL or NoSQL queries against your data stores, retrieve records, and return structured results</div></div>
+      <div class="card"><div class="card-icon">💻</div><div class="card-title">Code Execution</div><div class="card-body">Execute Python scripts, run calculations, process data, or trigger any subprocess in your environment</div></div>
+      <div class="card"><div class="card-icon">🔌</div><div class="card-title">External APIs</div><div class="card-body">Call any REST or GraphQL endpoint — payment processors, CRMs, communication platforms, IoT devices</div></div>
+      <div class="card"><div class="card-icon">📁</div><div class="card-title">File Operations</div><div class="card-body">Read from and write to the filesystem, process documents, generate reports, or manage data files</div></div>
+      <div class="card"><div class="card-icon">⚡</div><div class="card-title">Business Workflows</div><div class="card-body">Trigger approvals, send notifications, update records, or orchestrate multi-step business processes</div></div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 5 ─────────────── -->
+  <section class="section" id="s5">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <div class="section-title-block">
+        <div class="section-tag">Multi-Agent</div>
+        <h2 class="section-title">Handoffs<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">Multi-Agent Delegation</span></h2>
+        <p class="section-desc">Handoffs let you compose teams of specialists that delegate to each other, rather than building one monolithic agent that does everything. Each agent stays focused on what it does best.</p>
+      </div>
+    </div>
+
+    <div class="callout green">Rather than one giant agent that does everything, compose teams of specialists that delegate to each other. Systems scale by adding agents, not by bloating one prompt.</div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Python — Multi-Agent System</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+      <div class="code-body">research_agent = <span class="cls">Agent</span>(
+    name=<span class="str">"Researcher"</span>,
+    instructions=<span class="str">"Find facts, data, and sources on any given topic."</span>,
+    tools=[search_web, fetch_url]
+)
+
+writer_agent = <span class="cls">Agent</span>(
+    name=<span class="str">"Writer"</span>,
+    instructions=<span class="str">"Transform research findings into polished prose."</span>,
+    output_type=Article
+)
+
+manager = <span class="cls">Agent</span>(
+    name=<span class="str">"Manager"</span>,
+    instructions=<span class="str">"Coordinate research and writing. Route tasks to the right specialist."</span>,
+    handoffs=[research_agent, writer_agent]
+)
+
+result = <span class="cls">Runner</span>.<span class="fn">run_sync</span>(manager, <span class="str">"Write a 500-word article on quantum computing"</span>)</div>
+    </div>
+
+    <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;">Handoff Configuration Properties</p>
+
+    <div class="params-grid">
+      <div class="param-card">
+        <div class="param-name">handoffs <span class="optional-badge">on Agent</span></div>
+        <div class="param-type">list[Agent]</div>
+        <div>
+          <div class="param-desc"><strong>List of target agents</strong> this agent can delegate to. The delegating agent decides which specialist to call based on the task. The runner manages the invocation and returns results to the originating agent.</div>
+          <div class="param-default">Agents must be instantiated before being referenced in handoffs</div>
+        </div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">Delegation decision</div>
+        <div class="param-type">automatic (LLM)</div>
+        <div>
+          <div class="param-desc"><strong>The model decides</strong> when and which agent to hand off to based on agent names, instructions, and the current task context. Write clear agent names and instructions to guide routing accuracy.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards-2">
+      <div class="card"><div class="card-icon">🎯</div><div class="card-title">Focused Prompts</div><div class="card-body">Each agent keeps a short, precise instruction set focused on its specialty — no bloat, no confusion</div></div>
+      <div class="card"><div class="card-icon">🔀</div><div class="card-title">Model Flexibility</div><div class="card-body">Different agents can use different models — cheap/fast for routing, powerful for analysis, specialized for code</div></div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 6 ─────────────── -->
+  <section class="section" id="s6">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <div class="section-title-block">
+        <div class="section-tag">Persistence</div>
+        <h2 class="section-title">Memory<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">Conversation &amp; Context Persistence</span></h2>
+        <p class="section-desc">Without memory, an agent treats every message as the first one. Memory is what makes an agent feel like an assistant rather than a glorified autocomplete.</p>
+      </div>
+    </div>
+
+    <div class="memory-grid">
+      <div class="memory-card">
+        <div class="memory-icon">⚡</div>
+        <div class="memory-name">Short-Term Memory</div>
+        <div class="memory-desc">Holds the current conversation turn-by-turn within a single runner invocation. Automatically managed by the runner. Cleared when the session ends.</div>
+      </div>
+      <div class="memory-card lt">
+        <div class="memory-icon">📚</div>
+        <div class="memory-name">Long-Term Memory</div>
+        <div class="memory-desc">Persistent facts about the user or domain that survive across multiple sessions. Stored in an external database or vector store and retrieved on demand.</div>
+      </div>
+      <div class="memory-card session">
+        <div class="memory-icon">🔗</div>
+        <div class="memory-name">Session Memory</div>
+        <div class="memory-desc">Workflow-scoped context shared across all agents in a single run. Every agent and tool in the same session sees the same session memory state.</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Python — Memory Types</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+      <div class="code-body"><span class="kw">from</span> agents.memory <span class="kw">import</span> SessionMemory, PersistentMemory
+
+<span class="cmt"># Short/session memory — wiped per session</span>
+memory = <span class="cls">SessionMemory</span>()
+
+<span class="cmt"># Long-term memory — persists across sessions</span>
+<span class="cmt"># (typically backed by a vector store or DB)</span>
+memory = <span class="cls">PersistentMemory</span>(store=<span class="fn">my_vector_db</span>)
+
+agent = <span class="cls">Agent</span>(
+    name=<span class="str">"Assistant"</span>,
+    memory=memory,
+    instructions=<span class="str">"Remember the user's preferences across our conversation."</span>
+)</div>
+    </div>
+
+    <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;">Memory Properties</p>
+
+    <div class="params-grid">
+      <div class="param-card">
+        <div class="param-name">scope</div>
+        <div class="param-type">session | global</div>
+        <div><div class="param-desc"><strong>Defines visibility.</strong> Session-scoped memory is isolated per workflow run. Global memory is shared across all runs for the same user or agent, enabling genuine long-term recall.</div></div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">store</div>
+        <div class="param-type">MemoryStore</div>
+        <div><div class="param-desc"><strong>Backing storage provider.</strong> In-memory for development, vector databases (Pinecone, Weaviate, pgvector) for semantic retrieval, or key-value stores for exact-match lookups.</div></div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">retrieval_k</div>
+        <div class="param-type">int</div>
+        <div><div class="param-desc"><strong>Number of memories</strong> to retrieve per turn for long-term memory. Higher values give more context at the cost of more tokens in the prompt.</div><div class="param-default">Default: <span>5</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 7 ─────────────── -->
+  <section class="section" id="s7">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <div class="section-title-block">
+        <div class="section-tag">Shared State</div>
+        <h2 class="section-title">Context<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">Shared Workflow State</span></h2>
+        <p class="section-desc">Context is the shared state that travels with the entire workflow. It holds information that isn't part of the conversation itself but that every agent and tool may need — user metadata, flags, counters, and workflow variables.</p>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Python — Context Object</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+      <div class="code-body"><span class="cmt"># Context flows through the entire workflow</span>
+context = {
+    <span class="str">"user_id"</span>: <span class="num">123</span>,
+    <span class="str">"premium"</span>: <span class="cls">True</span>,
+    <span class="str">"region"</span>: <span class="str">"us-east-1"</span>,
+    <span class="str">"language"</span>: <span class="str">"en"</span>,
+    <span class="str">"trace_id"</span>: <span class="str">"req-abc-123"</span>,
+    <span class="str">"step_count"</span>: <span class="num">0</span>,
+}
+
+result = <span class="cls">Runner</span>.<span class="fn">run_sync</span>(manager_agent, <span class="str">"Process order #4521"</span>, context=context)</div>
+    </div>
+
+    <div class="cards-2">
+      <div class="card"><div class="card-icon">👤</div><div class="card-title">User Metadata</div><div class="card-body">user_id, plan tier, region, language, timezone — anything that scopes the workflow to a specific user</div></div>
+      <div class="card"><div class="card-icon">🔢</div><div class="card-title">Execution State</div><div class="card-body">Step counters, retry counts, intermediate results, loop variables — mutable workflow bookkeeping</div></div>
+      <div class="card"><div class="card-icon">🏷️</div><div class="card-title">Feature Flags</div><div class="card-body">A/B test toggles, capability switches, environment tags (staging vs. prod) that agents and tools check at runtime</div></div>
+      <div class="card"><div class="card-icon">🔍</div><div class="card-title">Observability</div><div class="card-body">Trace IDs, span IDs, request correlation IDs — link every agent call back to the originating user request</div></div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 8 ─────────────── -->
+  <section class="section" id="s8">
+    <div class="section-header">
+      <span class="section-num">08</span>
+      <div class="section-title-block">
+        <div class="section-tag">Safety</div>
+        <h2 class="section-title">Guardrails<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">Validation &amp; Safety</span></h2>
+        <p class="section-desc">Guardrails are the safety and validation layer of the SDK. They sit between the agent's output and the rest of the system, deciding what is allowed through.</p>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Python — Custom Guardrail</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+      <div class="code-body"><span class="kw">from</span> agents <span class="kw">import</span> guardrail, GuardrailResult
+
+<span class="dec">@guardrail</span>
+<span class="kw">def</span> <span class="fn">no_pii_guardrail</span>(output: <span class="cls">str</span>) -> <span class="cls">GuardrailResult</span>:
+    <span class="str">"""Block outputs containing PII like email addresses or phone numbers."""</span>
+    <span class="kw">if</span> <span class="fn">contains_pii</span>(output):
+        <span class="kw">return</span> <span class="cls">GuardrailResult</span>(approved=<span class="cls">False</span>, reason=<span class="str">"PII detected"</span>)
+    <span class="kw">return</span> <span class="cls">GuardrailResult</span>(approved=<span class="cls">True</span>)
+
+agent = <span class="cls">Agent</span>(
+    name=<span class="str">"Customer Agent"</span>,
+    guardrails=[no_pii_guardrail, schema_validation_guardrail]
+)</div>
+    </div>
+
+    <div class="params-grid">
+      <div class="param-card">
+        <div class="param-name">approved <span class="required-badge">required</span></div>
+        <div class="param-type">bool</div>
+        <div><div class="param-desc"><strong>Pass/fail decision.</strong> <code style="color:var(--accent3);font-family:var(--mono);font-size:12px">True</code> lets the output proceed downstream. <code style="color:var(--red);font-family:var(--mono);font-size:12px">False</code> triggers the on_reject behavior (retry, refuse, or escalate).</div></div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">reason <span class="optional-badge">optional</span></div>
+        <div class="param-type">str</div>
+        <div><div class="param-desc"><strong>Human-readable explanation</strong> of why the guardrail rejected an output. Logged for auditing, shown to operators, or used to guide retry prompts.</div></div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">on_reject <span class="optional-badge">optional</span></div>
+        <div class="param-type">"retry" | "refuse" | "escalate"</div>
+        <div><div class="param-desc"><strong>Action when rejected.</strong> Retry prompts the agent to try again. Refuse returns an error to the caller. Escalate hands off to a human or supervisor agent.</div><div class="param-default">Default: <span>"refuse"</span></div></div>
+      </div>
+    </div>
+
+    <div class="flow">
+      <div class="flow-step"><div class="flow-icon">🤖</div><div class="flow-content"><div class="flow-label">AGENT OUTPUT</div><div class="flow-text">Agent produces a response — text, structured output, or tool call</div></div></div>
+      <div class="flow-step green"><div class="flow-icon">🛡️</div><div class="flow-content"><div class="flow-label">GUARDRAIL CHECK</div><div class="flow-text">Each configured guardrail evaluates the output sequentially</div></div></div>
+      <div class="flow-step green"><div class="flow-icon">✅</div><div class="flow-content"><div class="flow-label">APPROVED</div><div class="flow-text">Output passes all guardrails → proceeds downstream to caller or next agent</div></div></div>
+      <div class="flow-step" style="opacity:0.7;"><div class="flow-icon">❌</div><div class="flow-content"><div class="flow-label">REJECTED</div><div class="flow-text">Guardrail blocks output → triggers retry, refuse, or escalate based on on_reject setting</div></div></div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 9 ─────────────── -->
+  <section class="section" id="s9">
+    <div class="section-header">
+      <span class="section-num">09</span>
+      <div class="section-title-block">
+        <div class="section-tag">Structured Output</div>
+        <h2 class="section-title">Output Types<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">Typed, Reliable Responses</span></h2>
+        <p class="section-desc">Output types turn agents from chatbots into APIs. Instead of free-text answers, you get typed objects you can reliably parse and pass to other systems — no fragile string parsing required.</p>
+      </div>
+    </div>
+
+    <div class="callout">Output types turn agents from chatbots into APIs. An agent that returns a Pydantic object is one you can wire into a backend without writing fragile parsing logic.</div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Python — Structured Output with Pydantic</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+      <div class="code-body"><span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel, Field
+<span class="kw">from</span> typing <span class="kw">import</span> Optional, List
+<span class="kw">from</span> agents <span class="kw">import</span> Agent
+
+<span class="kw">class</span> <span class="cls">WeatherOutput</span>(<span class="cls">BaseModel</span>):
+    city: <span class="cls">str</span> = <span class="cls">Field</span>(description=<span class="str">"City name as provided"</span>)
+    temperature_c: <span class="cls">int</span> = <span class="cls">Field</span>(description=<span class="str">"Temperature in Celsius"</span>)
+    condition: <span class="cls">str</span> = <span class="cls">Field</span>(description=<span class="str">"Weather condition (Sunny, Rainy, etc.)"</span>)
+    humidity_pct: <span class="cls">Optional</span>[<span class="cls">int</span>] = <span class="cls">Field</span>(<span class="cls">None</span>, description=<span class="str">"Relative humidity %"</span>)
+    alerts: <span class="cls">List</span>[<span class="cls">str</span>] = <span class="cls">Field</span>(default_factory=<span class="cls">list</span>)
+
+agent = <span class="cls">Agent</span>(
+    name=<span class="str">"Weather Agent"</span>,
+    output_type=<span class="cls">WeatherOutput</span>  <span class="cmt"># SDK enforces this schema on every response</span>
+)
+
+result = <span class="cls">Runner</span>.<span class="fn">run_sync</span>(agent, <span class="str">"Weather in Chennai?"</span>)
+weather: <span class="cls">WeatherOutput</span> = result.final_output
+<span class="fn">print</span>(weather.temperature_c)  <span class="cmt"># → 34</span></div>
+    </div>
+
+    <div class="cards-2">
+      <div class="card" style="border-color:rgba(255,79,109,0.3)"><div class="card-title" style="color:var(--red)">❌ Without output_type</div><div class="code-block" style="margin-top:12px;"><div class="code-body" style="padding:12px 16px;font-size:12px;">"The weather in Chennai is sunny with a high of around 34°C today."</div></div><div class="card-body" style="margin-top:8px;">Brittle to parse, inconsistent format, not machine-readable</div></div>
+      <div class="card" style="border-color:rgba(0,229,176,0.3)"><div class="card-title" style="color:var(--accent3)">✅ With output_type</div><div class="code-block" style="margin-top:12px;"><div class="code-body" style="padding:12px 16px;font-size:12px;">{
+  "city": "Chennai",
+  "temperature_c": 34,
+  "condition": "Sunny",
+  "humidity_pct": 72,
+  "alerts": []
+}</div></div><div class="card-body" style="margin-top:8px;">Typed, validated, wire-ready for any downstream system</div></div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 10 ─────────────── -->
+  <section class="section" id="s10">
+    <div class="section-header">
+      <span class="section-num">10</span>
+      <div class="section-title-block">
+        <div class="section-tag">Real-Time UX</div>
+        <h2 class="section-title">Streaming<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">Real-Time Token Generation</span></h2>
+        <p class="section-desc">Streaming is what makes agents feel responsive. Rather than waiting for the full response, tokens arrive as they are generated — essential for chat UIs, live dashboards, and any interface where perceived latency matters.</p>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Python — Streaming Patterns</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+      <div class="code-body"><span class="kw">import</span> asyncio
+<span class="kw">from</span> agents <span class="kw">import</span> Runner
+
+<span class="cmt"># Pattern 1: Token-by-token stream (chat typewriter effect)</span>
+<span class="kw">async def</span> <span class="fn">stream_response</span>():
+    <span class="kw">async for</span> token <span class="kw">in</span> <span class="cls">Runner</span>.<span class="fn">stream</span>(agent, <span class="str">"Write a haiku about AI"</span>):
+        <span class="fn">print</span>(token, end=<span class="str">""</span>, flush=<span class="cls">True</span>)
+
+<span class="cmt"># Pattern 2: Full workflow stream (see intermediate steps)</span>
+<span class="kw">async def</span> <span class="fn">stream_workflow</span>():
+    <span class="kw">async for</span> event <span class="kw">in</span> <span class="cls">Runner</span>.<span class="fn">run_streamed</span>(agent, <span class="str">"Research quantum computing"</span>):
+        <span class="kw">if</span> event.type == <span class="str">"tool_call"</span>:
+            <span class="fn">print</span>(<span class="str">f"🔧 Calling tool: {event.tool_name}"</span>)
+        <span class="kw">elif</span> event.type == <span class="str">"token"</span>:
+            <span class="fn">print</span>(event.content, end=<span class="str">""</span>, flush=<span class="cls">True</span>)
+        <span class="kw">elif</span> event.type == <span class="str">"done"</span>:
+            <span class="fn">print</span>(<span class="str">"✅ Complete"</span>)</div>
+    </div>
+
+    <div class="params-grid">
+      <div class="param-card">
+        <div class="param-name">stream_options <span class="optional-badge">optional</span></div>
+        <div class="param-type">dict</div>
+        <div><div class="param-desc"><strong>Fine-tune streaming behavior.</strong> Control buffer size, event types to surface, and whether to include tool_call events in the stream alongside token events.</div></div>
+      </div>
+      <div class="param-card">
+        <div class="param-name">RunEvent.type</div>
+        <div class="param-type">"token" | "tool_call" | "handoff" | "done"</div>
+        <div><div class="param-desc"><strong>Event discriminator</strong> in run_streamed. Lets your UI differentiate between streaming tokens (show to user), tool calls (show loading spinner), handoffs (show routing indicator), and completion.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 11 ─────────────── -->
+  <section class="section" id="s11">
+    <div class="section-header">
+      <span class="section-num">11</span>
+      <div class="section-title-block">
+        <div class="section-tag">Lifecycle</div>
+        <h2 class="section-title">Sessions<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">Workflow Lifecycle</span></h2>
+        <p class="section-desc">A session is the lifecycle wrapper around a workflow. It ties together history, memory, state, and the continuity of a single user's interaction across multiple runner invocations.</p>
+      </div>
+    </div>
+
+    <div class="cards-2">
+      <div class="card"><div class="card-icon">📜</div><div class="card-title">Conversation History</div><div class="card-body">Full turn-by-turn log of user and agent messages within this session. Enables multi-turn coherence.</div></div>
+      <div class="card"><div class="card-icon">🧩</div><div class="card-title">Memory State</div><div class="card-body">Snapshot of memory at every step — allows replay, debugging, and rollback to earlier conversation states.</div></div>
+      <div class="card"><div class="card-icon">📦</div><div class="card-title">Workflow Variables</div><div class="card-body">Context and workflow-scoped variables persist within the session and are accessible to every agent in the run.</div></div>
+      <div class="card"><div class="card-icon">🔁</div><div class="card-title">Cross-Invocation Continuity</div><div class="card-body">Sessions persist across multiple Runner.run() calls — a user can pick up a conversation after closing and reopening the app.</div></div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 12 ─────────────── -->
+  <section class="section" id="s12">
+    <div class="section-header">
+      <span class="section-num">12</span>
+      <div class="section-title-block">
+        <div class="section-tag">Advanced</div>
+        <h2 class="section-title">Execution Concepts<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">Runnables, Async, Lifecycles</span></h2>
+        <p class="section-desc">Understanding Runnables and async patterns is what separates a toy agent from a production system. These concepts govern concurrency, throughput, and integration with real-world infrastructure.</p>
+      </div>
+    </div>
+
+    <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;">The Runnable Abstraction</p>
+
+    <div class="runnable-grid">
+      <div class="runnable-card">
+        <div class="runnable-type">Runnable Type</div>
+        <div class="runnable-name">Agent</div>
+        <div class="runnable-desc">A single AI worker with instructions, tools, and memory. The primary unit of execution in the SDK — receives input, reasons, calls tools, and produces output.</div>
+      </div>
+      <div class="runnable-card">
+        <div class="runnable-type">Runnable Type</div>
+        <div class="runnable-name">Tool</div>
+        <div class="runnable-desc">An executable Python function the agent can call. Annotated with @function_tool, it becomes a first-class citizen in the SDK's execution model with schema inference and lifecycle hooks.</div>
+      </div>
+      <div class="runnable-card">
+        <div class="runnable-type">Runnable Type</div>
+        <div class="runnable-name">Workflow</div>
+        <div class="runnable-desc">A choreographed sequence of agents and tools forming a complete pipeline. Can branch, loop, and conditionally hand off based on intermediate results.</div>
+      </div>
+      <div class="runnable-card">
+        <div class="runnable-type">Runnable Type</div>
+        <div class="runnable-name">Chain</div>
+        <div class="runnable-desc">A linked pipeline of runnables where each step's output becomes the next step's input. Useful for sequential transformations like: fetch → parse → summarize → format.</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Python — Async &amp; Parallel Execution</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+      <div class="code-body"><span class="kw">import</span> asyncio
+<span class="kw">from</span> agents <span class="kw">import</span> Runner
+
+<span class="cmt"># Concurrent multi-agent execution (production pattern)</span>
+<span class="kw">async def</span> <span class="fn">run_parallel</span>(queries: <span class="cls">list</span>[<span class="cls">str</span>]) -> <span class="cls">list</span>:
+    tasks = [<span class="cls">Runner</span>.<span class="fn">run</span>(agent, q) <span class="kw">for</span> q <span class="kw">in</span> queries]
+    results = <span class="kw">await</span> asyncio.<span class="fn">gather</span>(*tasks)
+    <span class="kw">return</span> [r.final_output <span class="kw">for</span> r <span class="kw">in</span> results]
+
+<span class="cmt"># FastAPI integration</span>
+<span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+app = <span class="cls">FastAPI</span>()
+
+<span class="dec">@app.post</span>(<span class="str">"/ask"</span>)
+<span class="kw">async def</span> <span class="fn">ask</span>(query: <span class="cls">str</span>):
+    result = <span class="kw">await</span> <span class="cls">Runner</span>.<span class="fn">run</span>(agent, query)
+    <span class="kw">return</span> {<span class="str">"answer"</span>: result.final_output}</div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 13 ─────────────── -->
+  <section class="section" id="s13">
+    <div class="section-header">
+      <span class="section-num">13</span>
+      <div class="section-title-block">
+        <div class="section-tag">System Design</div>
+        <h2 class="section-title">Full Architecture<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">Production-Grade Agentic System</span></h2>
+        <p class="section-desc">Once you understand the individual components, the full picture comes together naturally. A production system: a Runner driving a Manager Agent that handles routing, handing off to specialists that share memory through a common context.</p>
+      </div>
+    </div>
+
+    <div class="arch-visual">
+      <div class="arch-node runner">🚀 Runner</div>
+      <div class="arch-arrow"></div>
+      <div class="arch-node manager">🎯 Manager Agent</div>
+      <div style="display:flex;gap:80px;margin-top:24px;position:relative;z-index:1;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+          <div class="arch-node specialist">🔬 Researcher</div>
+          <div class="arch-sub">search_web, fetch_url</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+          <div class="arch-node specialist">✍️ Writer</div>
+          <div class="arch-sub">output_type=Article</div>
+        </div>
+      </div>
+      <div class="arch-arrow" style="margin-top:16px;"></div>
+      <div class="arch-node shared">🧠 Shared Context + Memory</div>
+      <div class="arch-arrow"></div>
+      <div class="arch-node runner" style="background:rgba(0,229,176,0.12);border-color:var(--accent3);color:var(--accent3);">📤 Final Output</div>
+    </div>
+
+    <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;">SDK Utilities at a Glance</p>
+
+    <div class="utility-grid">
+      <div class="utility-row head"><div class="utility-cell">Utility</div><div class="utility-cell">Purpose</div></div>
+      <div class="utility-row"><div class="utility-cell"><div class="utility-name">Agent</div></div><div class="utility-cell"><div class="utility-desc">Core AI worker — configures name, instructions, model, tools, memory, handoffs, guardrails, output_type</div></div></div>
+      <div class="utility-row"><div class="utility-cell"><div class="utility-name">Runner</div></div><div class="utility-cell"><div class="utility-desc">Executes workflows — run_sync(), run(), stream(), run_streamed() — drives the entire agentic loop</div></div></div>
+      <div class="utility-row"><div class="utility-cell"><div class="utility-name">@function_tool</div></div><div class="utility-cell"><div class="utility-desc">Decorator that turns any type-annotated Python function into a callable tool with automatic schema inference</div></div></div>
+      <div class="utility-row"><div class="utility-cell"><div class="utility-name">handoffs</div></div><div class="utility-cell"><div class="utility-desc">List of target Agent objects passed to Agent(handoffs=[...]) enabling multi-agent delegation and routing</div></div></div>
+      <div class="utility-row"><div class="utility-cell"><div class="utility-name">memory</div></div><div class="utility-cell"><div class="utility-desc">Persistence layer — SessionMemory for per-run, PersistentMemory for cross-session long-term recall</div></div></div>
+      <div class="utility-row"><div class="utility-cell"><div class="utility-name">@guardrail</div></div><div class="utility-cell"><div class="utility-desc">Decorator for safety/validation functions — must return GuardrailResult(approved: bool, reason: str)</div></div></div>
+      <div class="utility-row"><div class="utility-cell"><div class="utility-name">output_type</div></div><div class="utility-cell"><div class="utility-desc">Pydantic BaseModel class passed to Agent — enforces typed structured output on every response</div></div></div>
+      <div class="utility-row"><div class="utility-cell"><div class="utility-name">run_streamed()</div></div><div class="utility-cell"><div class="utility-desc">AsyncGenerator yielding RunEvents (token, tool_call, handoff, done) — enables real-time UI feedback</div></div></div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 14 ─────────────── -->
+  <section class="section" id="s14">
+    <div class="section-header">
+      <span class="section-num">14</span>
+      <div class="section-title-block">
+        <div class="section-tag">Growth Path</div>
+        <h2 class="section-title">Learning Roadmap<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">&amp; Industry Usage</span></h2>
+        <p class="section-desc">A structured learning path from first agent to production multi-agent system, mapped to skill levels and real industry applications.</p>
+      </div>
+    </div>
+
+    <div class="roadmap">
+      <div class="roadmap-level beginner">
+        <div class="roadmap-label">Beginner</div>
+        <div class="roadmap-item">Agent — parameters &amp; configuration</div>
+        <div class="roadmap-item">Runner — run_sync &amp; run</div>
+        <div class="roadmap-item">Tools — @function_tool decorator</div>
+        <div class="roadmap-item">Instructions — effective prompts</div>
+      </div>
+      <div class="roadmap-level intermediate">
+        <div class="roadmap-label">Intermediate</div>
+        <div class="roadmap-item">Handoffs — multi-agent composition</div>
+        <div class="roadmap-item">Structured outputs — Pydantic</div>
+        <div class="roadmap-item">Memory — short &amp; long term</div>
+        <div class="roadmap-item">Streaming — real-time token output</div>
+      </div>
+      <div class="roadmap-level advanced">
+        <div class="roadmap-label">Advanced</div>
+        <div class="roadmap-item">Guardrails — schema &amp; safety</div>
+        <div class="roadmap-item">Async workflows — concurrency</div>
+        <div class="roadmap-item">Context propagation — shared state</div>
+        <div class="roadmap-item">Multi-agent orchestration at scale</div>
+      </div>
+    </div>
+
+    <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;margin-top:40px;">Real-World Industry Deployments</p>
+
+    <div class="industry-grid">
+      <div class="industry-card"><div class="industry-icon">🎧</div><div><div class="industry-name">Customer Support</div><div class="industry-use">Tool-using support agents with escalation handoffs to human specialists or tier-2 agents</div></div></div>
+      <div class="industry-card"><div class="industry-icon">💰</div><div><div class="industry-name">Finance</div><div class="industry-use">Multi-agent policy evaluation, compliance checking, and risk-scoring pipelines</div></div></div>
+      <div class="industry-card"><div class="industry-icon">🏥</div><div><div class="industry-name">Healthcare</div><div class="industry-use">Clinical workflow orchestration, patient triage, and documentation agents with strict guardrails</div></div></div>
+      <div class="industry-card"><div class="industry-icon">📡</div><div><div class="industry-name">Telecom</div><div class="industry-use">Intelligent network incident routing, automated remediation, and operations agents</div></div></div>
+      <div class="industry-card"><div class="industry-icon">🛒</div><div><div class="industry-name">E-Commerce</div><div class="industry-use">Shopping assistants with product, inventory, and order management tools and memory</div></div></div>
+      <div class="industry-card"><div class="industry-icon">📖</div><div><div class="industry-name">Education</div><div class="industry-use">AI tutors with long-term memory of learner progress, pacing, and difficulty adaptation</div></div></div>
+    </div>
+  </section>
+
+  <!-- ─────────────── SECTION 15 ─────────────── -->
+  <section class="section" id="s15">
+    <div class="section-header">
+      <span class="section-num">15</span>
+      <div class="section-title-block">
+        <div class="section-tag">Reference</div>
+        <h2 class="section-title">Analogies<br><span style="font-size:0.6em;color:var(--text2);font-weight:400;">&amp; Resources</span></h2>
+        <p class="section-desc">If you remember nothing else from this guide, remember the analogies. They make the SDK click instantly in any conversation or interview.</p>
+      </div>
+    </div>
+
+    <div class="analogy-grid">
+      <div class="analogy-row head">
+        <div class="analogy-cell">SDK Component</div>
+        <div class="analogy-cell">Real-World Analogy</div>
+      </div>
+      <div class="analogy-row"><div class="analogy-cell"><div class="analogy-component">Agent</div></div><div class="analogy-cell"><div class="analogy-meaning">An employee with a defined role, skills, and responsibilities</div></div></div>
+      <div class="analogy-row"><div class="analogy-cell"><div class="analogy-component">Runner</div></div><div class="analogy-cell"><div class="analogy-meaning">The manager who assigns work, supervises execution, and coordinates the team</div></div></div>
+      <div class="analogy-row"><div class="analogy-cell"><div class="analogy-component">Tool</div></div><div class="analogy-cell"><div class="analogy-meaning">Software and apps the employee uses to get their job done</div></div></div>
+      <div class="analogy-row"><div class="analogy-cell"><div class="analogy-component">Memory</div></div><div class="analogy-cell"><div class="analogy-meaning">The employee's notebook — their personal history and accumulated knowledge</div></div></div>
+      <div class="analogy-row"><div class="analogy-cell"><div class="analogy-component">Handoff</div></div><div class="analogy-cell"><div class="analogy-meaning">Delegating a task to a teammate who is better qualified for it</div></div></div>
+      <div class="analogy-row"><div class="analogy-cell"><div class="analogy-component">Guardrails</div></div><div class="analogy-cell"><div class="analogy-meaning">Company policies, compliance rules, and approval processes</div></div></div>
+      <div class="analogy-row"><div class="analogy-cell"><div class="analogy-component">Context</div></div><div class="analogy-cell"><div class="analogy-meaning">The shared project folder everyone on the team can access</div></div></div>
+      <div class="analogy-row"><div class="analogy-cell"><div class="analogy-component">Output Type</div></div><div class="analogy-cell"><div class="analogy-meaning">The report template with required fields that must be filled before submission</div></div></div>
+    </div>
+
+    <p style="font-family:var(--mono);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;margin-top:40px;">Official Resources</p>
+
+    <div class="resources-grid">
+      <a class="resource-card" href="https://openai.github.io/openai-agents-python/" target="_blank">
+        <div class="resource-type">📖 Documentation</div>
+        <div class="resource-name">OpenAI Agents SDK Docs</div>
+        <div class="resource-url">openai.github.io/openai-agents-python</div>
+      </a>
+      <a class="resource-card" href="https://platform.openai.com/docs" target="_blank">
+        <div class="resource-type">🌐 Platform</div>
+        <div class="resource-name">OpenAI Platform Docs</div>
+        <div class="resource-url">platform.openai.com/docs</div>
+      </a>
+      <a class="resource-card" href="https://github.com/openai/openai-agents-python" target="_blank">
+        <div class="resource-type">💻 Source Code</div>
+        <div class="resource-name">GitHub — openai-agents-python</div>
+        <div class="resource-url">github.com/openai/openai-agents-python</div>
+      </a>
+    </div>
+  </section>
+
+</div>
+
+<!-- ── FOOTER ── -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-name">Ahmed Al-Imaad</div>
+    <a class="footer-link" href="https://www.linkedin.com/in/ahmed-al-imaad" target="_blank">linkedin.com/in/ahmed-al-imaad</a>
+    <div class="footer-copy">OpenAI Agents SDK — Practical Guide · All parameters, properties, and patterns documented</div>
+  </div>
+</footer>
+
+</body>
+</html>
