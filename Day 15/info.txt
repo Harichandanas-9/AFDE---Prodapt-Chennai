@@ -117,3 +117,25 @@ def delete_todo(todo_id: int):
         "message": "Todo Deleted"
     }
 
+
+
+
+
+
+
+
+
+{
+  "mcpServers": {
+    "simple-mcp-server": {
+      "command": "node",
+      "args": [
+        "/Users/shukranaahmed/Downloads/MCP Server/dist/index.js"
+      ]
+    },
+    "calculator-server": {
+      "command": "node",
+      "args": [
+        "/Users/shukranaahmed/Downloads/MCP Server/calculator-server/dist/index.js"
+      ]
+    },
