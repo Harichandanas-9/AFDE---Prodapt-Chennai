@@ -1,1 +1,119 @@
+#client
+import requests
+
+BASE_URL = "http://127.0.0.1:8000"
+
+
+# CREATE TODO
+response = requests.post(
+    f"{BASE_URL}/todos",
+    json={
+        "title": "Learn FastAPI",
+        "completed": False
+    }
+)
+
+print("\nCREATE TODO")
+print(response.json())
+
+
+# GET TODOS
+response = requests.get(
+    f"{BASE_URL}/todos"
+)
+
+print("\nGET TODOS")
+print(response.json())
+
+
+# UPDATE TODO
+response = requests.put(
+    f"{BASE_URL}/todos/1"
+)
+
+print("\nUPDATE TODO")
+print(response.json())
+
+
+# DELETE TODO
+response = requests.delete(
+    f"{BASE_URL}/todos/1"
+)
+
+print("\nDELETE TODO")
+print(response.json())
+
+
+
+#server 
+from fastapi import FastAPI
+from pydantic import BaseModel
+from typing import List
+
+app = FastAPI()
+
+# Fake Database
+todos = []
+
+
+# Schema
+class Todo(BaseModel):
+    title: str
+    completed: bool = False
+
+
+# GET ALL TODOS
+@app.get("/todos")
+def get_todos():
+    return todos
+
+
+# CREATE TODO
+@app.post("/todos")
+def create_todo(todo: Todo):
+
+    new_todo = {
+        "id": len(todos) + 1,
+        "title": todo.title,
+        "completed": todo.completed
+    }
+
+    todos.append(new_todo)
+
+    return {
+        "message": "Todo Created",
+        "todo": new_todo
+    }
+
+
+# UPDATE TODO
+@app.put("/todos/{todo_id}")
+def update_todo(todo_id: int):
+
+    for todo in todos:
+
+        if todo["id"] == todo_id:
+            todo["completed"] = True
+
+            return {
+                "message": "Todo Updated",
+                "todo": todo
+            }
+
+    return {
+        "error": "Todo not found"
+    }
+
+
+# DELETE TODO
+@app.delete("/todos/{todo_id}")
+def delete_todo(todo_id: int):
+
+    global todos
+
+    todos = [todo for todo in todos if todo["id"] != todo_id]
+
+    return {
+        "message": "Todo Deleted"
+    }
 
